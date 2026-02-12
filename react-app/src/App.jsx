@@ -103,7 +103,10 @@ function App() {
     const HandsConstructor = HandsModule.Hands || window.Hands;
 
     const hands = new HandsConstructor({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      locateFile: (file) => {
+        const version = HandsModule.VERSION || '0.4.1646424915'; 
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${version}/${file}`;
+      }
     });
 
     hands.setOptions({
@@ -125,13 +128,13 @@ function App() {
       const CameraConstructor = CameraModule.Camera || window.Camera;
       const camera = new CameraConstructor(webcamRef.current.video, {
         onFrame: async () => {
-            if (webcamRef.current?.video && handsRef.current) {
-                await handsRef.current.send({ image: webcamRef.current.video });
-            }
+          if (webcamRef.current?.video && handsRef.current) {
+            await handsRef.current.send({ image: webcamRef.current.video });
+          }
         },
         width: 640,
         height: 480
-    });
+      });
       
       camera.start();
       cameraRef.current = camera;
