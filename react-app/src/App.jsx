@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import * as HandsModule from '@mediapipe/hands';
 import * as CameraModule from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import * as DrawingModule from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
 
 // Import components
@@ -103,7 +103,11 @@ function App() {
     const HandsConstructor = HandsModule.Hands || window.Hands;
 
     const hands = new HandsConstructor({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      locateFile: (file) => {
+        // Tự động lấy version từ module để đảm bảo tương thích
+        const version = HandsModule.VERSION || '0.4.1646424915'; 
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${version}/${file}`;
+      }
     });
 
     hands.setOptions({
@@ -124,13 +128,13 @@ function App() {
       
       const CameraConstructor = CameraModule.Camera || window.Camera;
       const camera = new CameraConstructor(webcamRef.current.video, {
-          onFrame: async () => {
-              if (webcamRef.current?.video && handsRef.current) {
-                  await handsRef.current.send({ image: webcamRef.current.video });
-              }
-          },
-          width: 640,
-          height: 480
+        onFrame: async () => {
+          if (webcamRef.current?.video && handsRef.current) {
+            await handsRef.current.send({ image: webcamRef.current.video });
+          }
+        },
+        width: 640,
+        height: 480
       });
       
       camera.start();
@@ -207,26 +211,29 @@ function App() {
   const drawLandmarksOnCanvas = (results) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
     ctx.save();
-    
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (results.multiHandLandmarks) {
-  // Lặp qua tất cả các bàn tay tìm thấy
+      // Sử dụng DrawingModule để gọi hàm vẽ chính xác
+      const drawConnect = DrawingModule.drawConnectors || window.drawConnectors;
+      const drawLand = DrawingModule.drawLandmarks || window.drawLandmarks;
+
       results.multiHandLandmarks.forEach((landmarks) => {
-        drawConnectors(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
+        drawConnect(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
           color: '#00FF00',
           lineWidth: 2
         });
-        drawLandmarks(ctx, landmarks, {
+        drawLand(ctx, landmarks, {
           color: '#FF0000',
-          lineWidth: 1
+          lineWidth: 1,
+          radius: 3
         });
       });
     }
+    ctx.restore();
+  };
     
     ctx.restore();
   };
