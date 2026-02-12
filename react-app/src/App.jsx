@@ -210,24 +210,30 @@ function App() {
   const drawLandmarksOnCanvas = (results) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
     ctx.save();
-    
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (results.multiHandLandmarks) {
-  // Lặp qua tất cả các bàn tay tìm thấy
+      // Lấy hàm vẽ từ module hoặc window để đảm bảo không bị undefined
       const drawConnect = DrawingModule.drawConnectors || window.drawConnectors;
       const drawLand = DrawingModule.drawLandmarks || window.drawLandmarks;
 
       results.multiHandLandmarks.forEach((landmarks) => {
-        drawConnect(ctx, landmarks, HandsModule.HAND_CONNECTIONS, { color: '#00FF00' });
-        drawLand(ctx, landmarks, { color: '#FF0000' });
+        // Vẽ dây xanh lá (Connectors)
+        drawConnect(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
+          color: '#00FF00', // Màu xanh lá
+          lineWidth: 3
+        });
+
+        // Vẽ điểm đỏ (Landmarks)
+        drawLand(ctx, landmarks, {
+          color: '#FF0000',
+          lineWidth: 1,
+          radius: 5
+        });
       });
     }
-    
     ctx.restore();
   };
   
