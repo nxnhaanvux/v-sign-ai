@@ -1,0 +1,21 @@
+{
+  "model_name": "V-Sign AI",
+  "version": "1.0.0",
+  "description": "Vietnamese Sign Language Recognition Model",
+  "gestures": [
+    "Đau",
+    "Bác sĩ",
+    "Cần giúp",
+    "Thuốc",
+    "Cảm ơn"
+  ],
+  "num_classes": 5,
+  "sequence_length": 30,
+  "num_landmarks": 21,
+  "input_shape": [
+    30,
+    63
+  ],
+  "framework": "TensorFlow.js",
+  "license": "MIT"
+}

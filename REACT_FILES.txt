@@ -1,0 +1,51 @@
+REACT APP SOURCE FILES
+======================
+
+📁 react-app/
+│
+├── 📄 package.json           - Dependencies và scripts
+├── 📄 vite.config.js         - Vite build configuration
+├── 📄 tailwind.config.js     - Tailwind CSS customization
+├── 📄 postcss.config.js      - PostCSS configuration
+├── 📄 index.html             - HTML entry point
+│
+├── 📁 src/
+│   ├── 📄 main.jsx           - React entry point
+│   ├── 📄 index.css          - Global styles + Tailwind
+│   ├── 📄 App.jsx            - ⭐ MAIN COMPONENT (700+ lines)
+│   │                           • MediaPipe Hands integration
+│   │                           • TensorFlow.js model loading
+│   │                           • Real-time prediction logic
+│   │                           • State management
+│   │
+│   └── 📁 components/
+│       ├── 📄 LoadingScreen.jsx      - Beautiful loading animation
+│       ├── 📄 Header.jsx             - Top header with FPS/stats
+│       ├── 📄 CameraSection.jsx      - Camera + hand tracking UI
+│       ├── 📄 PredictionSection.jsx  - Results display
+│       └── 📄 InfoPanel.jsx          - Info sections & features
+│
+└── 📁 public/
+    └── 📁 tfjs_model/        - Copy model files here
+        ├── model.json
+        ├── group1-shard1of1.bin
+        └── labels.json
+
+TOTAL:
+- 13 source files
+- 5 React components
+- 700+ lines in App.jsx
+- Full TypeScript support ready
+- Tailwind CSS for styling
+- Vite for fast dev & build
+
+TO EXTRACT (Linux/Mac):
+  tar -xzf react-app-source.tar.gz
+
+TO EXTRACT (Windows):
+  Use 7-Zip or WinRAR
+
+TO RUN:
+  cd react-app
+  npm install
+  npm run dev
