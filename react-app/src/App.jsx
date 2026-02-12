@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
-import { Hands } from '@mediapipe/hands';
+import * as HandsModule from '@mediapipe/hands';
 import { Camera } from '@mediapipe/camera_utils';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
@@ -99,14 +99,17 @@ function App() {
   
   // ===== INITIALIZE MEDIAPIPE =====
   const initializeMediaPipe = async () => {
-    const hands = new Hands({
+        // Kiểm tra constructor an toàn cho Production
+    const HandsConstructor = HandsModule.Hands || window.Hands;
+
+    const hands = new HandsConstructor({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       }
     });
-    
+
     hands.setOptions({
-      maxNumHands: 2,
+      maxNumHands: 2,           // Sửa lỗi chính tả và bật 2 tay
       modelComplexity: 1,
       minDetectionConfidence: 0.7,
       minTrackingConfidence: 0.7
@@ -212,19 +215,16 @@ function App() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    if (results.multiHandLandmarks) {
+  // Lặp qua tất cả các bàn tay tìm thấy
       results.multiHandLandmarks.forEach((landmarks) => {
-      // Draw connections
-        drawConnectors(ctx, landmarks, Hands.HAND_CONNECTIONS, {
+        drawConnectors(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
           color: '#00FF00',
           lineWidth: 2
         });
-        
-        // Draw landmarks
         drawLandmarks(ctx, landmarks, {
           color: '#FF0000',
-          fillColor: '#FF0000',
-          radius: 3
+          lineWidth: 1
         });
       });
     }
