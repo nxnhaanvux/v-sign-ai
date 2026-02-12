@@ -11,6 +11,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    chunkSizeWarningLimit: 1600, // THÊM DÒNG NÀY ĐỂ TẮT CẢNH BÁO
     rollupOptions: {
       output: {
         manualChunks: {
