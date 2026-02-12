@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import * as HandsModule from '@mediapipe/hands';
-import { Camera } from '@mediapipe/camera_utils';
+import * as CameraModule from '@mediapipe/camera_utils';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
 
@@ -34,8 +34,8 @@ function App() {
   // ===== CONSTANTS =====
   const SEQUENCE_LENGTH = 30;
   const CONFIDENCE_THRESHOLD = 0.7;
-  const MODEL_PATH = '/tfjs_model/model.json';
-  const LABELS_PATH = '/tfjs_model/labels.json';
+  const MODEL_PATH = './tfjs_model/model.json';
+  const LABELS_PATH = './tfjs_model/labels.json';
   
   // ===== LOAD MODEL & LABELS =====
   useEffect(() => {
@@ -103,9 +103,7 @@ function App() {
     const HandsConstructor = HandsModule.Hands || window.Hands;
 
     const hands = new HandsConstructor({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      }
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
 
     hands.setOptions({
@@ -124,14 +122,15 @@ function App() {
     if (!isLoading && webcamRef.current?.video && handsRef.current) {
       console.log('Starting camera...');
       
-      const camera = new Camera(webcamRef.current.video, {
-        onFrame: async () => {
-          if (webcamRef.current?.video && handsRef.current) {
-            await handsRef.current.send({ image: webcamRef.current.video });
-          }
-        },
-        width: 640,
-        height: 480
+      const CameraConstructor = CameraModule.Camera || window.Camera;
+      const camera = new CameraConstructor(webcamRef.current.video, {
+          onFrame: async () => {
+              if (webcamRef.current?.video && handsRef.current) {
+                  await handsRef.current.send({ image: webcamRef.current.video });
+              }
+          },
+          width: 640,
+          height: 480
       });
       
       camera.start();
