@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import * as HandsModule from '@mediapipe/hands';
 import * as CameraModule from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import * as DrawingModule from '@mediapipe/drawing_utils';
 import * as tf from '@tensorflow/tfjs';
 
 // Import components
@@ -219,15 +219,12 @@ function App() {
     
     if (results.multiHandLandmarks) {
   // Lặp qua tất cả các bàn tay tìm thấy
+      const drawConnect = DrawingModule.drawConnectors || window.drawConnectors;
+      const drawLand = DrawingModule.drawLandmarks || window.drawLandmarks;
+
       results.multiHandLandmarks.forEach((landmarks) => {
-        drawConnectors(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
-          color: '#00FF00',
-          lineWidth: 2
-        });
-        drawLandmarks(ctx, landmarks, {
-          color: '#FF0000',
-          lineWidth: 1
-        });
+        drawConnect(ctx, landmarks, HandsModule.HAND_CONNECTIONS, { color: '#00FF00' });
+        drawLand(ctx, landmarks, { color: '#FF0000' });
       });
     }
     
