@@ -211,28 +211,34 @@ function App() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (results.multiHandLandmarks) {
-      // Lấy hàm vẽ từ module hoặc window để đảm bảo không bị undefined
+      // Thử lấy hàm vẽ từ nhiều nguồn để tránh lỗi Production
       const drawConnect = DrawingModule.drawConnectors || window.drawConnectors;
       const drawLand = DrawingModule.drawLandmarks || window.drawLandmarks;
+      const connections = HandsModule.HAND_CONNECTIONS || window.HAND_CONNECTIONS;
 
-      results.multiHandLandmarks.forEach((landmarks) => {
-        // Vẽ dây xanh lá (Connectors)
-        drawConnect(ctx, landmarks, HandsModule.HAND_CONNECTIONS, {
-          color: '#00FF00', // Màu xanh lá
-          lineWidth: 3
-        });
+      if (drawConnect && drawLand) {
+        results.multiHandLandmarks.forEach((landmarks) => {
+          // Vẽ dây xanh (Connectors)
+          drawConnect(ctx, landmarks, connections, {
+            color: '#00FF00',
+            lineWidth: 4
+          });
 
-        // Vẽ điểm đỏ (Landmarks)
-        drawLand(ctx, landmarks, {
-          color: '#FF0000',
-          lineWidth: 1,
-          radius: 5
+          // Vẽ điểm đỏ (Landmarks)
+          drawLand(ctx, landmarks, {
+            color: '#FF0000',
+            lineWidth: 2,
+            radius: 5
+          });
         });
-      });
+      } else {
+        console.error("DrawingUtils not loaded properly");
+      }
     }
     ctx.restore();
   };
