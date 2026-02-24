@@ -17,49 +17,87 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # ===== CONFIGURATION =====
-SEQUENCE_LENGTH = 30 
-NUM_LANDMARKS = 42    # 21 landmarks * 2 hands
-COORDINATES = 3       
-INPUT_FEATURES = 126  # 42 * 3
+SEQUENCE_LENGTH = 30  # 30 frames per sequence
+NUM_LANDMARKS = 42    # MediaPipe Hands provides 21 landmarks
+COORDINATES = 3       # x, y, z coordinates
+NUM_CLASSES = 6       # 5 medical gestures
 
-GESTURES = ['Đau', 'Bác_sĩ', 'Cần_giúp', 'Thuốc', 'Cảm_ơn']
-NUM_CLASSES = len(GESTURES)
+GESTURES = ['Đau', 'Bác_sĩ', 'Cần_giúp', 'Thuốc', 'Cảm_ơn', 'Dau']
 
 # ===== DATA LOADING =====
 def load_dataset(data_dir='dataset'):
-    X, y = [] , []
-    print("Loading dataset with 2-hand support logic...")
+    """
+    Load dataset from directory structure:
+    dataset/
+    ├── Đau/
+    │   ├── person1_seq001.json
+    │   ├── person1_seq002.json
+    │   └── ...
+    ├── Bác_sĩ/
+    └── ...
+    
+    Each JSON file structure:
+    {
+        "gesture": "Đau",
+        "sequences": [
+            {
+                "frames": [
+                    {
+                        "landmarks": [
+                            {"x": 0.5, "y": 0.3, "z": -0.02},
+                            ...  # 21 landmarks total
+                        ]
+                    }
+                    ...  # 30 frames total
+                ]
+            }
+        ]
+    }
+    """
+    X = []  # Features
+    y = []  # Labels
+    
+    print("Loading dataset...")
     
     for label_idx, gesture in enumerate(GESTURES):
-        # Chuyển đổi tên folder khớp với GESTURES (thay khoảng trắng bằng _)
-        gesture_folder = gesture.replace(' ', '_')
-        gesture_path = os.path.join(data_dir, gesture_folder)
+        gesture_path = os.path.join(data_dir, gesture)
         
-        if not os.path.exists(gesture_path): continue
+        if not os.path.exists(gesture_path):
+            print(f"Warning: {gesture_path} not found. Skipping...")
+            continue
         
+        file_count = 0
         for filename in os.listdir(gesture_path):
             if filename.endswith('.json'):
-                with open(os.path.join(gesture_path, filename), 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    for sequence in data['sequences']:
-                        frames_data = []
-                        for frame in sequence['frames']:
-                            # Lấy tất cả landmarks hiện có
-                            lms = [ [lm['x'], lm['y'], lm['z']] for lm in frame['landmarks'] ]
-                            flattened = np.array(lms).flatten()
-                            
-                            # Zero-padding: Nếu chỉ có 21 landmarks (63 values), bù thêm 63 số 0
-                            if len(flattened) == 63:
-                                flattened = np.concatenate([flattened, np.zeros(63)])
-                            # Nếu dữ liệu rỗng hoặc sai, skip frame này (giới hạn ở 126)
-                            elif len(flattened) > 126:
-                                flattened = flattened[:126]
-                                
-                            frames_data.append(flattened)
+                try:
+                    with open(os.path.join(gesture_path, filename), 'r', encoding='utf-8') as f:
+                        data = json.load(f)
                         
-                        if len(frames_data) == SEQUENCE_LENGTH:
-                            X.append(frames_data)
-                            y.append(label_idx)
+                        # Process all sequences in the file
+                        for sequence in data['sequences']:
+                            frames_data = []
+                            
+                            # Extract landmarks from each frame
+                            for frame in sequence['frames']:
+                                landmarks = np.array([
+                                    [lm['x'], lm['y'], lm['z']] 
+                                    for lm in frame['landmarks']
+                                ])
+                                frames_data.append(landmarks.flatten())  # Shape: (63,)
+                            
+                            # Ensure we have exactly 30 frames
+                            if len(frames_data) == SEQUENCE_LENGTH:
+                                X.append(frames_data)
+                                y.append(label_idx)
+                                file_count += 1
+                            else:
+                                print(f"Warning: {filename} has {len(frames_data)} frames, expected {SEQUENCE_LENGTH}")
+                
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+        
+        print(f"  {gesture}: {file_count} sequences loaded")
+    
     return np.array(X), np.array(y)
 
 # ===== DATA AUGMENTATION =====
@@ -121,27 +159,40 @@ def augment_dataset(X, y, augmentation_factor=2):
 # ===== MODEL ARCHITECTURE =====
 def create_model(input_shape=(SEQUENCE_LENGTH, NUM_LANDMARKS * COORDINATES)):
     """
-    Create LSTM model
-    Input: (30, 126) for 2 hands
+    Create LSTM model for gesture recognition
+    
+    Architecture:
+    - LSTM Layer 1: 128 units with return sequences
+    - Dropout: 0.3
+    - LSTM Layer 2: 64 units
+    - Dropout: 0.3
+    - Dense: 64 units (ReLU)
+    - Dropout: 0.2
+    - Output: NUM_CLASSES units (Softmax)
     """
     model = Sequential([
+        # First LSTM layer
         LSTM(128, return_sequences=True, activation='relu', 
-             input_shape=input_shape),
+             input_shape=input_shape, name='lstm_1'),
         BatchNormalization(),
         Dropout(0.3),
         
-        LSTM(64, return_sequences=False, activation='relu'),
+        # Second LSTM layer
+        LSTM(64, return_sequences=False, activation='relu', name='lstm_2'),
         BatchNormalization(),
         Dropout(0.3),
         
-        Dense(64, activation='relu'),
+        # Dense layers
+        Dense(64, activation='relu', name='dense_1'),
         Dropout(0.2),
         
-        Dense(NUM_CLASSES, activation='softmax')
-    ])
+        # Output layer
+        Dense(NUM_CLASSES, activation='softmax', name='output')
+    ], name='VSIgn_LSTM')
     
+    # Compile model
     model.compile(
-        optimizer='adam',
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )

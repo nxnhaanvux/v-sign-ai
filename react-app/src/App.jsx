@@ -18,6 +18,8 @@ function App() {
   const canvasRef = useRef(null);
   const handsRef = useRef(null);
   const cameraRef = useRef(null);
+  const modelRef = useRef(null);
+  const labelsRef = useRef({});
   
   // ===== STATE =====
   const [model, setModel] = useState(null);
@@ -33,7 +35,7 @@ function App() {
   
   // ===== CONSTANTS =====
   const SEQUENCE_LENGTH = 30;
-  const CONFIDENCE_THRESHOLD = 0.7;
+  const CONFIDENCE_THRESHOLD = 0.2;
   const MODEL_PATH = '/tfjs_model/model.json';
   const LABELS_PATH = '/tfjs_model/labels.json';
   
@@ -47,12 +49,13 @@ function App() {
         console.log('Loading TensorFlow.js model...');
         const loadedModel = await tf.loadLayersModel(MODEL_PATH);
         setModel(loadedModel);
+        modelRef.current = loadedModel;
         console.log('✓ Model loaded successfully');
         setLoadingProgress(50);
         
         // Warm up the model
         console.log('Warming up model...');
-        const dummyInput = tf.zeros([1, SEQUENCE_LENGTH, 63]);
+        const dummyInput = tf.zeros([1, 30, 126]); // 126 thay vì 63
         loadedModel.predict(dummyInput).dispose();
         dummyInput.dispose();
         console.log('✓ Model warmed up');
@@ -66,6 +69,7 @@ function App() {
         }
         const labelData = await response.json();
         setLabels(labelData);
+        labelsRef.current = labelData;
         console.log('✓ Labels loaded:', labelData);
         setLoadingProgress(90);
         
@@ -169,41 +173,49 @@ function App() {
   
   // ===== PROCESS HAND LANDMARKS =====
   const onHandsResults = useCallback((results) => {
-    // Draw landmarks on canvas
-    drawLandmarksOnCanvas(results);
-    
-    // Check if hand is detected
-    const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
-    setIsHandDetected(handDetected);
-    
-    if (handDetected) {
-      const landmarks = results.multiHandLandmarks[0];
+      drawLandmarksOnCanvas(results);
       
-      // Flatten landmarks to 63-dimensional vector
-      const flattenedLandmarks = landmarks.flatMap(lm => [lm.x, lm.y, lm.z]);
+      const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+      setIsHandDetected(handDetected);
       
-      // Add to sequence buffer
-      setSequenceBuffer(prev => {
-        const newBuffer = [...prev, flattenedLandmarks];
-        
-        // Keep only last SEQUENCE_LENGTH frames
-        if (newBuffer.length > SEQUENCE_LENGTH) {
-          newBuffer.shift();
-        }
-        
-        // Predict when buffer is full
-        if (newBuffer.length === SEQUENCE_LENGTH && model) {
-          predictGesture(newBuffer);
-        }
-        
-        return newBuffer;
-      });
-    } else {
-      // No hand detected - reset buffer and prediction
-      setSequenceBuffer([]);
-      setPrediction('');
-      setConfidence(0);
-    }
+      if (handDetected) {
+          let flattenedLandmarks;
+          
+          // Xử lý 1 hoặc 2 tay thành vector 126 chiều
+          if (results.multiHandLandmarks.length === 1) {
+              const hand1 = results.multiHandLandmarks[0].flatMap(lm => [lm.x, lm.y, lm.z]);
+              const hand2Padding = new Array(63).fill(0);
+              flattenedLandmarks = [...hand1, ...hand2Padding];
+          } else {
+              const hand1 = results.multiHandLandmarks[0].flatMap(lm => [lm.x, lm.y, lm.z]);
+              const hand2 = results.multiHandLandmarks[1].flatMap(lm => [lm.x, lm.y, lm.z]);
+              flattenedLandmarks = [...hand1, ...hand2];
+          }
+          
+          setSequenceBuffer(prev => {
+              const newBuffer = [...prev, flattenedLandmarks];
+              
+              // In ra để xem số frame đang chạy (Rất hữu ích để debug)
+              console.log(`Đang gom frame: ${newBuffer.length}/30`);
+              
+              if (newBuffer.length > SEQUENCE_LENGTH) {
+                  newBuffer.shift();
+              }
+              
+              if (newBuffer.length === SEQUENCE_LENGTH && modelRef.current) {
+                  console.log("🟢 Đã gom đủ 30 frames! Bắt đầu dự đoán...");
+                  predictGesture(newBuffer);
+              }
+              
+              return newBuffer;
+          });
+      } else {
+    // KHI MẤT DẤU TAY: 
+    // Chúng ta KHÔNG xóa mảng sequenceBuffer nữa, cứ giữ đó chờ tay xuất hiện lại.
+    // Chỉ cần ẩn đi kết quả chữ trên màn hình thôi.
+    setPrediction('');
+    setConfidence(0);
+}
   }, [model]);
   
   // ===== DRAW LANDMARKS ON CANVAS =====
@@ -243,37 +255,45 @@ function App() {
     ctx.restore();
   };
   
-  // ===== PREDICT GESTURE =====
   const predictGesture = async (sequence) => {
-    if (!model) return;
+    if (!modelRef.current) return;
     
     try {
-      // Convert to tensor: shape [1, 30, 63]
-      const inputTensor = tf.tensor3d([sequence]);
+      const inputTensor = tf.tensor3d([sequence], [1, 30, 126]);
       
-      // Predict
-      const predictions = model.predict(inputTensor);
+      const predictions = modelRef.current.predict(inputTensor);
       const predictionsArray = await predictions.data();
       
-      // Get class with highest probability
       const maxIndex = predictionsArray.indexOf(Math.max(...predictionsArray));
       const maxConfidence = predictionsArray[maxIndex];
+      const gestureName = labelsRef.current[maxIndex];
       
-      // Update UI only if confidence is high enough
-      if (maxConfidence >= CONFIDENCE_THRESHOLD) {
-        setPrediction(labels[maxIndex] || '');
+      console.log(`🤖 Đoán: ${gestureName} - Tự tin: ${(maxConfidence * 100).toFixed(2)}%`);
+      
+      if (maxConfidence >= CONFIDENCE_THRESHOLD) { 
+        console.log("✅ Đủ tự tin! BẮT ĐẦU IN CHỮ LÊN MÀN HÌNH NÀY:", gestureName);
+        setPrediction(gestureName); // Lệnh này sẽ yêu cầu giao diện hiện chữ
         setConfidence(maxConfidence);
       } else {
-        setPrediction('');
-        setConfidence(0);
+        console.log("⚠️ Tự tin quá thấp, không in!");
       }
       
-      // Cleanup tensors
+      // CHỈ HIỂN THỊ KHI ĐỦ TỰ TIN
+      if (maxConfidence >= CONFIDENCE_THRESHOLD) { 
+        setPrediction(gestureName || '');
+        setConfidence(maxConfidence);
+      } 
+      // XÓA KHỐI ELSE ĐI! 
+      // Không gọi setPrediction('') ở đây nữa để giữ lại chữ trên màn hình cho mắt kịp đọc.
+      else {
+        console.log("⚠️ Tự tin thấp -> Bỏ qua, giữ nguyên chữ cũ trên màn hình");
+      }
+      
       inputTensor.dispose();
       predictions.dispose();
       
     } catch (error) {
-      console.error('Prediction error:', error);
+      console.error('Lỗi khi dự đoán:', error);
     }
   };
   

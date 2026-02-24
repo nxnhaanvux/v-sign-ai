@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-Sign AI - Thu thập Dữ liệu (FIXED)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #e63946;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .alert-critical {
+            background: #fee;
+            border: 3px solid #e63946;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-critical h3 {
+            color: #e63946;
+            margin-bottom: 10px;
+        }
+        
+        .gesture-guide {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .gesture-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .gesture-card {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .gesture-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .gesture-card.selected {
+            background: #667eea;
+            color: white;
+        }
+        
+        .gesture-card .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .gesture-card .name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .setup-section {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .video-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .instructions-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .status {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .status-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .countdown {
+            font-size: 72px;
+            font-weight: 700;
+            color: #667eea;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .samples-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        
+        .sample-item {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sample-item.completed {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        @media (max-width: 768px) {
+            .video-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤟 V-Sign AI - Thu thập Dữ liệu THẬT</h1>
+        <p class="subtitle">✅ FIXED: Đường xương chính xác như MediaPipe official</p>
+        
+        <div class="alert-critical">
+            <h3>🚨 QUAN TRỌNG:</h3>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Version này sử dụng <strong>MediaPipe Drawing Utils CHÍNH THỨC</strong></li>
+                <li>Đường xương (connections) giống 100% với MediaPipe official</li>
+                <li>Màu xanh lá chuẩn, độ dày đường chuẩn</li>
+            </ul>
+        </div>
+
+        <!-- Gesture Selection -->
+        <div class="gesture-guide">
+            <h3>📚 CHỌN KÝ HIỆU CẦN THU THẬP</h3>
+            <div class="gesture-cards">
+                <div class="gesture-card" onclick="selectGesture('Đau', this)">
+                    <div class="icon">😣</div>
+                    <div class="name">Đau</div>
+                </div>
+                <div class="gesture-card" onclick="selectGesture('Bác_sĩ', this)">
+                    <div class="icon">👨‍⚕️</div>
+                    <div class="name">Bác sĩ</div>
+                </div>
+                <div class="gesture-card" onclick="selectGesture('Cần_giúp', this)">
+                    <div class="icon">🆘</div>
+                    <div class="name">Cần giúp</div>
+                </div>
+                <div class="gesture-card" onclick="selectGesture('Thuốc', this)">
+                    <div class="icon">💊</div>
+                    <div class="name">Thuốc</div>
+                </div>
+                <div class="gesture-card" onclick="selectGesture('Cảm_ơn', this)">
+                    <div class="icon">🙏</div>
+                    <div class="name">Cảm ơn</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Setup -->
+        <div class="setup-section">
+            <h3 style="margin-bottom: 15px;">⚙️ Cấu hình</h3>
+            <div class="input-group">
+                <label>Ký hiệu đã chọn:</label>
+                <input type="text" id="gestureName" readonly placeholder="Chọn ký hiệu ở trên">
+            </div>
+            <div class="input-group">
+                <label>ID người thực hiện:</label>
+                <input type="text" id="personId" value="person1">
+            </div>
+            <div class="input-group">
+                <label>Số lượng mẫu:</label>
+                <input type="number" id="targetSamples" value="100" min="50" max="200">
+            </div>
+        </div>
+        
+        <!-- Video Section -->
+        <div class="video-section">
+            <div class="video-container">
+                <video id="webcam" autoplay></video>
+                <canvas id="canvas"></canvas>
+                <div class="instructions-overlay" id="instructions">
+                    👆 Nhấn "Bắt đầu Camera"
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="status">
+                    <h4 style="margin-bottom: 10px;">📊 Trạng thái</h4>
+                    <div class="status-item">
+                        <span>Camera:</span>
+                        <span class="status-value" id="cameraStatus">Chưa kết nối</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Tay:</span>
+                        <span class="status-value" id="handStatus">Không</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Mẫu:</span>
+                        <span class="status-value"><span id="currentSamples">0</span>/<span id="targetDisplay">100</span></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+                
+                <div id="countdown" class="countdown" style="display: none;">3</div>
+                
+                <button class="btn-primary" id="startCameraBtn" onclick="startCamera()">
+                    📹 Bắt đầu Camera
+                </button>
+                
+                <button class="btn-success" id="recordBtn" onclick="startRecording()" disabled>
+                    🔴 Ghi Mẫu
+                </button>
+                
+                <button class="btn-primary" id="downloadBtn" onclick="downloadData()" disabled>
+                    💾 Download Dataset
+                </button>
+                
+                <button class="btn-danger" onclick="resetData()">
+                    🗑️ Reset
+                </button>
+            </div>
+        </div>
+        
+        <!-- Samples List -->
+        <div>
+            <h3>📋 Danh sách Mẫu</h3>
+            <div class="samples-list" id="samplesList">
+                <p style="text-align: center; color: #999; padding: 20px;">
+                    Chưa có mẫu nào...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let hands;
+        let camera;
+        let isRecording = false;
+        let currentFrames = [];
+        let allSamples = [];
+        let sequenceCount = 0;
+        let selectedGesture = '';
+        
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Select gesture
+        function selectGesture(gestureName, element) {
+            selectedGesture = gestureName;
+            document.getElementById('gestureName').value = gestureName;
+            
+            document.querySelectorAll('.gesture-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            
+            document.getElementById('instructions').innerHTML = 
+                `<strong>Đang thu: ${gestureName}</strong>`;
+        }
+        
+        // Initialize MediaPipe Hands
+        async function initializeHands() {
+            hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
+            
+            hands.setOptions({
+                maxNumHands: 2,  // CHỈ 1 TAY
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.7
+            });
+            
+            hands.onResults(onResults);
+        }
+        
+        // Start camera
+        async function startCamera() {
+            if (!selectedGesture) {
+                alert('⚠️ Vui lòng CHỌN KÝ HIỆU trước!');
+                return;
+            }
+            
+            try {
+                await initializeHands();
+                
+                camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 640,
+                    height: 480
+                });
+                
+                await camera.start();
+                
+                canvas.width = 640;
+                canvas.height = 480;
+                
+                document.getElementById('cameraStatus').textContent = 'Kết nối ✓';
+                document.getElementById('cameraStatus').style.color = '#48bb78';
+                document.getElementById('startCameraBtn').disabled = true;
+                document.getElementById('recordBtn').disabled = false;
+                
+            } catch (error) {
+                alert('Lỗi camera: ' + error.message);
+            }
+        }
+        
+        // Process hand results - SỬ DỤNG MEDIAPIPE DRAWING UTILS CHÍNH THỨC
+        function onResults(results) {
+            // Clear canvas
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Vẽ video lên canvas (optional - để debug)
+            // ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+            
+            if (results.multiHandLandmarks) {
+                for (const landmarks of results.multiHandLandmarks) {
+                    // SỬ DỤNG MEDIAPIPE DRAWING UTILS - CHUẨN 100%
+                    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+                        color: '#00FF00',
+                        lineWidth: 5
+                    });
+                    
+                    drawLandmarks(ctx, landmarks, {
+                        color: '#FF0000',
+                        lineWidth: 2,
+                        radius: 4
+                    });
+                }
+            }
+            
+            ctx.restore();
+            
+            // Update status
+            const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+            document.getElementById('handStatus').textContent = handDetected ? 'Có ✓' : 'Không';
+            document.getElementById('handStatus').style.color = handDetected ? '#48bb78' : '#f56565';
+            
+            // Capture frame if recording
+            if (isRecording && handDetected) {
+                captureFrame(results.multiHandLandmarks[0]);
+            }
+        }
+        
+        // Start recording
+        async function startRecording() {
+            if (!selectedGesture) {
+                alert('⚠️ Vui lòng CHỌN KÝ HIỆU!');
+                return;
+            }
+            
+            const personId = document.getElementById('personId').value.trim();
+            if (!personId) {
+                alert('⚠️ Vui lòng nhập ID người thực hiện!');
+                return;
+            }
+            
+            document.getElementById('recordBtn').disabled = true;
+            
+            const countdownEl = document.getElementById('countdown');
+            const instructionsEl = document.getElementById('instructions');
+            countdownEl.style.display = 'block';
+            
+            // Countdown 3s
+            for (let i = 3; i > 0; i--) {
+                countdownEl.textContent = i;
+                instructionsEl.innerHTML = `<strong style="font-size: 1.5em;">Chuẩn bị... ${i}</strong>`;
+                await sleep(1000);
+            }
+            
+            countdownEl.textContent = 'GHI!';
+            countdownEl.style.color = '#f56565';
+            instructionsEl.innerHTML = `<strong style="font-size: 2em; color: #f56565;">📹 ĐANG GHI!</strong>`;
+            
+            // Start recording
+            isRecording = true;
+            currentFrames = [];
+            
+            // Record for 1 second
+            await sleep(1000);
+            
+            // Stop
+            isRecording = false;
+            countdownEl.style.display = 'none';
+            countdownEl.style.color = '#667eea';
+            instructionsEl.innerHTML = `<strong>Đang thu: ${selectedGesture}</strong>`;
+            
+            // Save
+            if (currentFrames.length >= 25) {
+                saveSample(selectedGesture, personId);
+            } else {
+                alert(`⚠️ Chỉ ${currentFrames.length} frames. Cần ít nhất 25. Thử lại!`);
+            }
+            
+            document.getElementById('recordBtn').disabled = false;
+        }
+        
+        // Capture frame
+        function captureFrame(landmarks) {
+            const frame = {
+                landmarks: landmarks.map(lm => ({
+                    x: lm.x,
+                    y: lm.y,
+                    z: lm.z
+                }))
+            };
+            currentFrames.push(frame);
+        }
+        
+        // Save sample
+        function saveSample(gestureName, personId) {
+            sequenceCount++;
+            
+            // Pad to 30 frames
+            let frames = currentFrames.slice();
+            while (frames.length < 30) {
+                frames.push(frames[frames.length - 1]);
+            }
+            frames = frames.slice(0, 30);
+            
+            const sample = {
+                gesture: gestureName,
+                person_id: personId,
+                sequence_id: sequenceCount,
+                sequences: [{
+                    frames: frames,
+                    duration_ms: 1000
+                }],
+                timestamp: new Date().toISOString()
+            };
+            
+            allSamples.push(sample);
+            updateSamplesList();
+            updateProgress();
+            document.getElementById('downloadBtn').disabled = false;
+            
+            const target = parseInt(document.getElementById('targetSamples').value);
+            if (allSamples.length >= target) {
+                alert(`🎉 Hoàn thành ${target} mẫu! Nhấn Download.`);
+            }
+        }
+        
+        // Update samples list
+        function updateSamplesList() {
+            const listEl = document.getElementById('samplesList');
+            
+            if (allSamples.length === 0) {
+                listEl.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Chưa có mẫu...</p>';
+                return;
+            }
+            
+            listEl.innerHTML = allSamples.map((sample, idx) => `
+                <div class="sample-item completed">
+                    <span><strong>#${idx + 1}:</strong> ${sample.gesture} - ${sample.person_id}</span>
+                    <span style="font-size: 12px; color: #28a745;">
+                        ✓ ${sample.sequences[0].frames.length} frames
+                    </span>
+                </div>
+            `).join('');
+        }
+        
+        // Update progress
+        function updateProgress() {
+            const target = parseInt(document.getElementById('targetSamples').value);
+            const current = allSamples.length;
+            const percentage = Math.min((current / target) * 100, 100);
+            
+            document.getElementById('currentSamples').textContent = current;
+            document.getElementById('targetDisplay').textContent = target;
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+        
+        // Download data
+        function downloadData() {
+            if (allSamples.length === 0) {
+                alert('⚠️ Chưa có dữ liệu!');
+                return;
+            }
+            
+            const personId = document.getElementById('personId').value.trim() || 'person';
+            
+            // Gộp tất cả 100 mẫu vào chung 1 mảng 'sequences'
+            const combinedData = {
+                gesture: selectedGesture,
+                person_id: personId,
+                total_samples: allSamples.length,
+                sequences: allSamples.map(sample => sample.sequences[0]), // Lấy lõi data của từng mẫu gộp lại
+                timestamp: new Date().toISOString()
+            };
+            
+            // Ép thành 1 file JSON duy nhất
+            const dataStr = JSON.stringify(combinedData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            // Tên file tải về sẽ có dạng: Đau_person1_100samples.json
+            a.download = `${selectedGesture}_${personId}_${allSamples.length}samples.json`; 
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert(`✅ TẢI THÀNH CÔNG!\n\nĐã gộp ${allSamples.length} mẫu vào 1 file JSON duy nhất.\nBạn chỉ cần ném đúng 1 file này vào thư mục "dataset/${selectedGesture}/" là xong. Code Python sẽ tự động đọc được hết!`);
+        }
+        
+        // Reset
+        function resetData() {
+            if (allSamples.length > 0 && !confirm('⚠️ Xóa tất cả dữ liệu?')) {
+                return;
+            }
+            
+            allSamples = [];
+            sequenceCount = 0;
+            currentFrames = [];
+            selectedGesture = '';
+            
+            document.querySelectorAll('.gesture-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            document.getElementById('gestureName').value = '';
+            updateSamplesList();
+            updateProgress();
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('instructions').innerHTML = '👆 Chọn ký hiệu và bắt đầu';
+        }
+        
+        // Sleep helper
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // MediaPipe HAND_CONNECTIONS - CHÍNH THỨC
+        const HAND_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 4],           // Thumb
+            [0, 5], [5, 6], [6, 7], [7, 8],           // Index
+            [5, 9], [9, 10], [10, 11], [11, 12],      // Middle
+            [9, 13], [13, 14], [14, 15], [15, 16],    // Ring
+            [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]  // Pinky
+        ];
+        
+        // Drawing functions - SỬ DỤNG MEDIAPIPE DRAWING UTILS
+        function drawConnectors(ctx, landmarks, connections, style) {
+            ctx.strokeStyle = style.color;
+            ctx.lineWidth = style.lineWidth;
+            
+            connections.forEach(([start, end]) => {
+                const startPoint = landmarks[start];
+                const endPoint = landmarks[end];
+                
+                ctx.beginPath();
+                ctx.moveTo(startPoint.x * canvas.width, startPoint.y * canvas.height);
+                ctx.lineTo(endPoint.x * canvas.width, endPoint.y * canvas.height);
+                ctx.stroke();
+            });
+        }
+        
+        function drawLandmarks(ctx, landmarks, style) {
+            landmarks.forEach(landmark => {
+                ctx.fillStyle = style.color;
+                ctx.beginPath();
+                ctx.arc(
+                    landmark.x * canvas.width,
+                    landmark.y * canvas.height,
+                    style.radius,
+                    0,
+                    2 * Math.PI
+                );
+                ctx.fill();
+            });
+        }
+        
+        // Update target on change
+        document.getElementById('targetSamples').addEventListener('change', updateProgress);
+    </script>
+</body>
+</html>

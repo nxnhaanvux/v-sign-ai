@@ -12,111 +12,86 @@ from pathlib import Path
 # Gesture configurations
 GESTURES = ['Đau', 'Bác_sĩ', 'Cần_giúp', 'Thuốc', 'Cảm_ơn']
 SEQUENCE_LENGTH = 30
-NUM_LANDMARKS = 21
+NUM_LANDMARKS = 42
 SAMPLES_PER_GESTURE = 50  # Generate 50 samples per gesture
 
 def generate_gesture_pattern(gesture_name, sample_idx):
     """
-    Generate a synthetic gesture pattern
-    In real application, replace this with actual MediaPipe landmark data
-    
-    Each gesture has different movement characteristics:
-    - Đau: Hand moving to body (decreasing x)
-    - Bác sĩ: Cross-like pattern
-    - Cần giúp: Hands up (high y values)
-    - Thuốc: Hand to mouth motion
-    - Cảm ơn: Hand forward motion
+    Sinh dữ liệu giả lập cho ký hiệu 1 tay và 2 tay (42 landmarks total).
+    Hand 1: landmarks 0-20
+    Hand 2: landmarks 21-41
     """
     frames = []
     
     for frame_idx in range(SEQUENCE_LENGTH):
         landmarks = []
+        progress = frame_idx / SEQUENCE_LENGTH
         
-        # Base position with some variation
-        base_x = 0.5 + np.random.normal(0, 0.05)
-        base_y = 0.5 + np.random.normal(0, 0.05)
-        base_z = 0.0
+        # --- Khởi tạo vị trí gốc cho 2 tay ---
+        # Tay 1 (thường nằm bên trái khung hình)
+        h1_base = [0.3, 0.5, 0.0] 
+        # Tay 2 (thường nằm bên phải khung hình)
+        h2_base = [0.7, 0.5, 0.0]
         
-        # Gesture-specific movements
+        # --- Định nghĩa quỹ đạo di chuyển (Trajectory) ---
         if gesture_name == 'Đau':
-            # Hand moving toward body
-            progress = frame_idx / SEQUENCE_LENGTH
-            base_x -= progress * 0.2
-            base_y += np.sin(progress * np.pi) * 0.1
-        
+            # 1 Tay: Di chuyển tay 1 về phía cơ thể, Tay 2 triệt tiêu
+            h1_base[0] += progress * 0.2  # Di chuyển x
+            h1_base[1] += np.sin(progress * np.pi) * 0.1 # Chuyển động cong
+            h2_base = [0.0, 0.0, 0.0] # Không sử dụng tay 2
+
         elif gesture_name == 'Bác_sĩ':
-            # Cross pattern
-            progress = frame_idx / SEQUENCE_LENGTH
-            if progress < 0.5:
-                base_y += progress * 0.3
-            else:
-                base_x += (progress - 0.5) * 0.3
-        
+            # 2 Tay: Tay 1 chạm vào cổ tay 2
+            h1_base = [0.5 + (1-progress)*0.2, 0.6, 0.0]
+            h2_base = [0.5, 0.7, 0.0]
+
         elif gesture_name == 'Cần_giúp':
-            # Hands up
-            progress = frame_idx / SEQUENCE_LENGTH
-            base_y -= progress * 0.3
-            base_x += np.sin(progress * 2 * np.pi) * 0.05
-        
+            # 2 Tay: Cùng đưa lên cao
+            h1_base[1] -= progress * 0.3
+            h2_base[1] -= progress * 0.3
+            h1_base[0] += np.sin(progress * 2 * np.pi) * 0.05
+            h2_base[0] -= np.sin(progress * 2 * np.pi) * 0.05
+
         elif gesture_name == 'Thuốc':
-            # Hand to mouth
-            progress = frame_idx / SEQUENCE_LENGTH
-            base_y -= progress * 0.2
-            base_x += progress * 0.1
-            base_z -= progress * 0.05
-        
+            # 1 Tay: Đưa tay lên miệng
+            h1_base[1] -= progress * 0.3
+            h1_base[0] = 0.5 
+            h2_base = [0.0, 0.0, 0.0]
+
         elif gesture_name == 'Cảm_ơn':
-            # Hand forward
-            progress = frame_idx / SEQUENCE_LENGTH
-            base_z += progress * 0.15
-            base_y -= progress * 0.1
-        
-        # Generate 21 landmarks with hand structure
-        for landmark_idx in range(NUM_LANDMARKS):
-            # Simplified hand structure
-            if landmark_idx == 0:  # Wrist
-                x, y, z = base_x, base_y, base_z
-            elif 1 <= landmark_idx <= 4:  # Thumb
-                offset = (landmark_idx - 1) * 0.02
-                x = base_x - 0.05 + offset
-                y = base_y + 0.02
-                z = base_z
-            elif 5 <= landmark_idx <= 8:  # Index finger
-                offset = (landmark_idx - 5) * 0.025
-                x = base_x - 0.02
-                y = base_y - offset
-                z = base_z
-            elif 9 <= landmark_idx <= 12:  # Middle finger
-                offset = (landmark_idx - 9) * 0.025
-                x = base_x
-                y = base_y - offset
-                z = base_z
-            elif 13 <= landmark_idx <= 16:  # Ring finger
-                offset = (landmark_idx - 13) * 0.025
-                x = base_x + 0.02
-                y = base_y - offset
-                z = base_z
-            else:  # Pinky (17-20)
-                offset = (landmark_idx - 17) * 0.025
-                x = base_x + 0.04
-                y = base_y - offset
-                z = base_z
+            # 1 Tay: Đưa tay từ cằm ra phía trước
+            h1_base[2] -= progress * 0.4 # Di chuyển trục Z (về phía camera)
+            h1_base[1] += progress * 0.1
+            h2_base = [0.0, 0.0, 0.0]
+
+        # --- Sinh chi tiết 42 landmarks dựa trên vị trí gốc ---
+        for hand_idx in range(2):
+            current_base = h1_base if hand_idx == 0 else h2_base
             
-            # Add small random noise
-            x += np.random.normal(0, 0.005)
-            y += np.random.normal(0, 0.005)
-            z += np.random.normal(0, 0.003)
-            
-            landmarks.append({
-                'x': float(x),
-                'y': float(y),
-                'z': float(z)
-            })
+            # Nếu tay đó không hoạt động (tọa độ 0), điền 21 landmark 0
+            if current_base == [0.0, 0.0, 0.0]:
+                for _ in range(21):
+                    landmarks.append({'x': 0.0, 'y': 0.0, 'z': 0.0})
+                continue
+
+            # Nếu tay có hoạt động, sinh cấu trúc bàn tay cơ bản
+            for lm_idx in range(21):
+                # Thêm nhiễu nhẹ để model học tốt hơn
+                noise = np.random.normal(0, 0.005, 3)
+                
+                # Cấu trúc ngón tay giả lập đơn giản dựa trên lm_idx
+                # (Wrist là 0, các ngón tay từ 1-20)
+                offset_y = (lm_idx // 4) * 0.02 
+                offset_x = (lm_idx % 4) * 0.01
+                
+                landmarks.append({
+                    'x': float(current_base[0] + offset_x + noise[0]),
+                    'y': float(current_base[1] - offset_y + noise[1]),
+                    'z': float(current_base[2] + noise[2])
+                })
         
-        frames.append({
-            'landmarks': landmarks
-        })
-    
+        frames.append({'landmarks': landmarks})
+        
     return frames
 
 def generate_dataset(output_dir='dataset'):

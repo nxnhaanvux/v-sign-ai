@@ -10,8 +10,6 @@ from unittest.mock import MagicMock
 # 1. Chặn lỗi Bad Image từ tensorflow_decision_forests
 sys.modules["tensorflow_decision_forests"] = MagicMock()
 sys.modules["tensorflow_decision_forests.keras"] = MagicMock()
-
-# 2. Chặn lỗi ImportError từ JAX (Lỗi bạn vừa gặp)
 mock_jax = MagicMock()
 sys.modules["jax"] = mock_jax
 sys.modules["jax.experimental"] = MagicMock()
@@ -23,12 +21,12 @@ from tensorflow import keras
 import json
 import os
 
-# ... (Giữ nguyên phần còn lại của file convert_to_tfjs.py) ...
+# ... (Giữ nguyên phần còn lại của fil  e convert_to_tfjs.py) ...
 
 # Gesture labels
-GESTURES = ['Đau', 'Bác sĩ', 'Cần giúp', 'Thuốc', 'Cảm ơn']
+GESTURES = ['Đau', 'Bác_sĩ', 'Cần_giúp', 'Thuốc', 'Cảm_ơn']
 
-def convert_to_tfjs(model_path='best_model.h5', output_dir='tfjs_model'):
+def convert_to_tfjs(model_path='vsign_model_final.h5', output_dir='tfjs_model'):
     """
     Convert Keras model to TensorFlow.js format
     
@@ -37,19 +35,21 @@ def convert_to_tfjs(model_path='best_model.h5', output_dir='tfjs_model'):
         output_dir: Directory to save the converted model
     """
     print("="*60)
-    print(" "*15 + "V-SIGN AI - MODEL CONVERTER")
+    print(" " * 15 + "V-SIGN AI - MODEL CONVERTER")
     print("="*60)
     
     # Check if model exists
     if not os.path.exists(model_path):
-        print(f"\nERROR: Model file '{model_path}' not found!")
-        print("Please train the model first using train_model.py")
+        print(f"\nERROR: File '{model_path}' không tồn tại!")
+        print("Vui lòng chạy train_model.py trước.")
         return
     
     # Load model
-    print(f"\nLoading model from '{model_path}'...")
+    print(f"\nĐang tải model từ '{model_path}'...")
     model = keras.models.load_model(model_path)
-    print("✓ Model loaded successfully")
+
+    input_shape = model.input_shape # (None, 30, 126)
+    print(f"✓ Model loaded. Input shape: {input_shape}")
     
     # Display model summary
     print("\nModel Summary:")
@@ -59,15 +59,12 @@ def convert_to_tfjs(model_path='best_model.h5', output_dir='tfjs_model'):
     os.makedirs(output_dir, exist_ok=True)
     
     # Convert to TensorFlow.js
-    print(f"\nConverting model to TensorFlow.js format...")
-    print(f"Output directory: {output_dir}")
+    print(f"\nĐang chuyển đổi sang định dạng TensorFlow.js...")
     
     tfjs.converters.save_keras_model(
         model,
         output_dir,
-        quantization_dtype_map={
-            'uint8': '*',  # Quantize all weights to uint8 for smaller size
-        }
+        quantization_dtype_map={'uint8': '*'} 
     )
     
     print("✓ Model converted successfully!")
@@ -89,8 +86,7 @@ def convert_to_tfjs(model_path='best_model.h5', output_dir='tfjs_model'):
         print(f"  - {filename} ({size_str})")
     
     # Create label mapping
-    label_map = {i: gesture for i, gesture in enumerate(GESTURES)}
-    
+    label_map = {str(i): gesture for i, gesture in enumerate(GESTURES)}
     labels_path = os.path.join(output_dir, 'labels.json')
     with open(labels_path, 'w', encoding='utf-8') as f:
         json.dump(label_map, f, ensure_ascii=False, indent=2)
@@ -99,27 +95,23 @@ def convert_to_tfjs(model_path='best_model.h5', output_dir='tfjs_model'):
     
     # Create metadata
     metadata = {
-        'model_name': 'V-Sign AI',
-        'version': '1.0.0',
-        'description': 'Vietnamese Sign Language Recognition Model',
+        'model_name': 'V-Sign AI (2-Hands Support)',
+        'version': '1.1.0',
         'gestures': GESTURES,
         'num_classes': len(GESTURES),
         'sequence_length': 30,
-        'num_landmarks': 21,
-        'input_shape': [30, 63],
-        'framework': 'TensorFlow.js',
-        'license': 'MIT'
+        'num_landmarks': 42,      # 21 * 2
+        'input_shape': [30, 126], # 42 * 3
+        'format': 'layers_model',
+        'quantized': True
     }
     
     metadata_path = os.path.join(output_dir, 'metadata.json')
     with open(metadata_path, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
     
-    print(f"✓ Metadata saved to '{metadata_path}'")
-    
-    # Print usage instructions
-    print("\n" + "="*60)
-    print("USAGE INSTRUCTIONS")
+    print(f"✓ Đã tạo labels.json và metadata.json")
+    print(f"✓ Lưu tại: {output_dir}/")
     print("="*60)
     print("\n1. Copy the entire 'tfjs_model' folder to your React project's public directory:")
     print("   public/tfjs_model/")
