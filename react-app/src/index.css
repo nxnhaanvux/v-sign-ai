@@ -90,3 +90,35 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* 1. Cố định khung chứa Camera */
+.camera-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* Ép tỷ lệ màn hình rộng chuẩn */
+  background-color: #111827; /* Màu xám đen (gray-900 của Tailwind) */
+  border-radius: 0.5rem;
+  overflow: hidden; /* TUYỆT ĐỐI KHÔNG BỎ DÒNG NÀY: Nó giúp gọt viền lòi ra */
+}
+
+/* 2. Ép Video và Canvas lấp đầy khung */
+.camera-container video,
+.camera-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover; /* Phóng to vừa vặn, không bị méo hình */
+}
+
+/* 3. Neo cái bảng "Không có tay" vào giữa màn hình đen */
+.no-hands-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  width: 80%; /* Giới hạn độ rộng để không đụng viền */
+  max-width: 300px;
+}

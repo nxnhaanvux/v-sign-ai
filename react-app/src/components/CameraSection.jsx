@@ -6,6 +6,7 @@ const CameraSection = ({ webcamRef, canvasRef, isHandDetected, sequenceBuffer, m
     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+        {/* ... (Phần Header giữ nguyên) ... */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="text-3xl">📹</div>
@@ -15,7 +16,6 @@ const CameraSection = ({ webcamRef, canvasRef, isHandDetected, sequenceBuffer, m
             </div>
           </div>
           
-          {/* Hand Detection Status */}
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${isHandDetected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
             <span className="text-white text-sm font-medium">
@@ -25,12 +25,13 @@ const CameraSection = ({ webcamRef, canvasRef, isHandDetected, sequenceBuffer, m
         </div>
       </div>
       
-      {/* Video Feed */}
-      <div className="relative bg-gray-900">
-        {/* Webcam */}
+      {/* 🚀 ĐÃ SỬA CHỖ NÀY: Thêm aspect-video (tỷ lệ 16:9) và overflow-hidden */}
+      <div className="relative bg-gray-900 aspect-video overflow-hidden">
+        
+        {/* Webcam - Ép full 100% khung hình cha */}
         <Webcam
           ref={webcamRef}
-          className="w-full h-auto"
+          className="absolute inset-0 w-full h-full object-cover"
           videoConstraints={{
             width: 640,
             height: 480,
@@ -39,17 +40,17 @@ const CameraSection = ({ webcamRef, canvasRef, isHandDetected, sequenceBuffer, m
           mirrored={true}
         />
         
-        {/* Overlay Canvas for Landmarks */}
+        {/* Overlay Canvas - Ép full 100% khung hình cha */}
         <canvas
           ref={canvasRef}
           style={{ transform: 'scaleX(-1)' }}
           width={640}
           height={480}
-          className="absolute top-0 left-0 w-full h-auto landmark-canvas"
+          className="absolute inset-0 w-full h-full object-cover landmark-canvas"
         />
         
-        {/* Buffer Progress Indicator */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+        {/* Buffer Progress Indicator (Thanh chạy) */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 z-20">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-medium">
               Đang thu thập frames: {sequenceBuffer.length}/{maxBuffer}
@@ -68,12 +69,12 @@ const CameraSection = ({ webcamRef, canvasRef, isHandDetected, sequenceBuffer, m
           </div>
         </div>
         
-        {/* No Hand Detected Overlay */}
+        {/* No Hand Detected Overlay (Bảng trắng không có tay) */}
         {!isHandDetected && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <div className="text-center bg-white/90 rounded-xl p-6 max-w-sm mx-4">
-              <div className="text-6xl mb-4">✋</div>
-              <p className="text-gray-800 font-semibold text-lg mb-2">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-30 backdrop-blur-sm">
+            <div className="text-center bg-white/95 rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+              <div className="text-6xl mb-4 animate-bounce">✋</div>
+              <p className="text-gray-800 font-bold text-xl mb-2">
                 Không phát hiện tay
               </p>
               <p className="text-gray-600 text-sm">
