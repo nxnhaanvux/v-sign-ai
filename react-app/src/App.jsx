@@ -35,7 +35,7 @@ function App() {
   
   // ===== CONSTANTS =====
   const SEQUENCE_LENGTH = 30;
-  const CONFIDENCE_THRESHOLD = 0.2;
+  const CONFIDENCE_THRESHOLD = 0.7;
   const MODEL_PATH = '/tfjs_model/model.json';
   const LABELS_PATH = '/tfjs_model/labels.json';
   
