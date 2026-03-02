@@ -9,10 +9,10 @@
   "num_classes": 5,
   "sequence_length": 30,
   "num_landmarks": 42,
-  "total_samples": 90,
-  "train_samples": 63,
-  "val_samples": 13,
-  "test_samples": 14,
-  "final_accuracy": 0.692307710647583,
-  "final_loss": 1.0143446922302246
+  "total_samples": 300,
+  "train_samples": 210,
+  "val_samples": 45,
+  "test_samples": 45,
+  "final_accuracy": 1.0,
+  "final_loss": 0.0010584384435787797
 }
